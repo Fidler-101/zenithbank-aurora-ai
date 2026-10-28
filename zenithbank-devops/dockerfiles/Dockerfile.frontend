@@ -1,0 +1,4 @@
+# Copy this file to zb-microfrontends/Dockerfile
+FROM nginx:alpine
+COPY . /usr/share/nginx/html
+EXPOSE 80

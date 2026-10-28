@@ -1,0 +1,195 @@
+# ============================================================
+# customer-service
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-service
+  namespace: zenithbank
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: customer-service}
+  template:
+    metadata:
+      labels: {app: customer-service}
+    spec:
+      containers:
+        - name: customer-service
+          image: ${REGISTRY}/zenithbank-customer-service:${TAG}
+          ports: [{containerPort: 8081}]
+          envFrom:
+            - configMapRef: {name: zenithbank-config}
+          env:
+            - {name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://postgres:5432/zenithbank_customer"}
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: DB_USER}}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: DB_PASSWORD}}
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: REDIS_PASSWORD}}
+            - name: SPRING_MAIL_USERNAME
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: SMTP_EMAIL}}
+            - name: SPRING_MAIL_PASSWORD
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: SMTP_APP_PASSWORD}}
+          volumeMounts:
+            - {name: jwt-keys, mountPath: /app/keys, readOnly: true}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 8081}
+            initialDelaySeconds: 25
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health, port: 8081}
+            initialDelaySeconds: 50
+            periodSeconds: 20
+      volumes:
+        - name: jwt-keys
+          secret: {secretName: zenithbank-jwt-keys}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-service
+  namespace: zenithbank
+spec:
+  selector: {app: customer-service}
+  ports: [{port: 8081, targetPort: 8081}]
+
+# ============================================================
+# banking-service
+# ============================================================
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banking-service
+  namespace: zenithbank
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: banking-service}
+  template:
+    metadata:
+      labels: {app: banking-service}
+    spec:
+      containers:
+        - name: banking-service
+          image: ${REGISTRY}/zenithbank-banking-service:${TAG}
+          ports: [{containerPort: 7777}]
+          envFrom:
+            - configMapRef: {name: zenithbank-config}
+          env:
+            - {name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://postgres:5432/zenithbank_banking"}
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: DB_USER}}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: DB_PASSWORD}}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 7777}
+            initialDelaySeconds: 25
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health, port: 7777}
+            initialDelaySeconds: 50
+            periodSeconds: 20
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: banking-service
+  namespace: zenithbank
+spec:
+  selector: {app: banking-service}
+  ports: [{port: 7777, targetPort: 7777}]
+
+# ============================================================
+# payment-service
+# ============================================================
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: zenithbank
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: payment-service}
+  template:
+    metadata:
+      labels: {app: payment-service}
+    spec:
+      containers:
+        - name: payment-service
+          image: ${REGISTRY}/zenithbank-payment-service:${TAG}
+          ports: [{containerPort: 8085}]
+          envFrom:
+            - configMapRef: {name: zenithbank-config}
+          env:
+            - {name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://postgres:5432/zenithbank_payment"}
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: DB_USER}}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: DB_PASSWORD}}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 8085}
+            initialDelaySeconds: 25
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health, port: 8085}
+            initialDelaySeconds: 50
+            periodSeconds: 20
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: zenithbank
+spec:
+  selector: {app: payment-service}
+  ports: [{port: 8085, targetPort: 8085}]
+
+# ============================================================
+# transaction-status-service
+# ============================================================
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-status-service
+  namespace: zenithbank
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: transaction-status-service}
+  template:
+    metadata:
+      labels: {app: transaction-status-service}
+    spec:
+      containers:
+        - name: transaction-status-service
+          image: ${REGISTRY}/zenithbank-transaction-status-service:${TAG}
+          ports: [{containerPort: 8087}]
+          envFrom:
+            - configMapRef: {name: zenithbank-config}
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: 8087}
+            initialDelaySeconds: 25
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health, port: 8087}
+            initialDelaySeconds: 50
+            periodSeconds: 20
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-status-service
+  namespace: zenithbank
+spec:
+  selector: {app: transaction-status-service}
+  ports: [{port: 8087, targetPort: 8087}]

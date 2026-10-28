@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Pending Approvals — ZenithBank</title>
+  <link rel="stylesheet" th:href="@{/css/zenith.css}">
+  <style>
+    body { background: #F1F5F9; }
+
+    /* Admin shell */
+    .admin-shell { display: flex; min-height: 100vh; }
+
+    .admin-sidebar {
+      width: 240px; background: var(--navy); flex-shrink: 0;
+      display: flex; flex-direction: column; padding: 0;
+      position: fixed; top: 0; left: 0; height: 100vh; z-index: 10;
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .sidebar-nav { padding: 12px 0; flex: 1; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; font-size: 13.5px; font-weight: 500;
+      color: rgba(255,255,255,0.55); text-decoration: none;
+      border-radius: 0; transition: var(--transition);
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
+    .nav-item.active {
+      color: white; background: rgba(37,99,235,0.2);
+      border-left-color: var(--blue);
+    }
+
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .nav-badge {
+      margin-left: auto; background: var(--blue); color: white;
+      font-size: 10px; font-weight: 700; padding: 2px 7px;
+      border-radius: 99px; min-width: 20px; text-align: center;
+    }
+
+    .sidebar-footer {
+      padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.07);
+      font-size: 12px; color: rgba(255,255,255,0.3);
+    }
+
+    /* Main content */
+    .admin-main { margin-left: 240px; flex: 1; padding: 32px; min-height: 100vh; }
+
+    /* Topbar */
+    .admin-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .page-title {
+      font-size: 22px; font-weight: 800; color: var(--text-primary);
+      letter-spacing: -0.4px;
+    }
+
+    .page-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* Stats row */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: white; border-radius: var(--radius-lg); padding: 20px 22px;
+      border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+    }
+
+    .stat-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .stat-value { font-size: 28px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; }
+    .stat-value.blue   { color: var(--blue); }
+    .stat-value.gold   { color: var(--gold); }
+    .stat-value.green  { color: var(--success); }
+    .stat-value.red    { color: var(--error); }
+
+    /* Table card */
+    .table-card {
+      background: white; border-radius: var(--radius-lg); border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm); overflow: hidden;
+    }
+
+    .table-header {
+      padding: 18px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+
+    .table-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+
+    .search-input {
+      padding: 8px 14px 8px 36px; border: 1.5px solid var(--border);
+      border-radius: var(--radius); font-size: 13px; font-family: 'Inter', sans-serif;
+      color: var(--text-primary); outline: none; width: 240px; transition: var(--transition);
+    }
+
+    .search-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+
+    .search-wrapper { position: relative; }
+    .search-wrapper::before {
+      content: '🔍'; position: absolute; left: 10px; top: 50%;
+      transform: translateY(-50%); font-size: 13px; pointer-events: none;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      padding: 11px 16px; text-align: left; font-size: 11px;
+      font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border); transition: var(--transition);
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #FAFBFF; }
+
+    td { padding: 14px 16px; font-size: 13.5px; color: var(--text-primary); vertical-align: middle; }
+
+    .customer-info { display: flex; align-items: center; gap: 10px; }
+
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 13px;
+      font-weight: 700; flex-shrink: 0;
+    }
+
+    .customer-name  { font-weight: 600; font-size: 13.5px; }
+    .customer-email { font-size: 12px; color: var(--text-muted); }
+
+    .action-buttons { display: flex; gap: 6px; }
+
+    .btn-approve {
+      padding: 6px 14px; background: var(--success-bg); color: var(--success);
+      border: 1px solid rgba(5,150,105,0.25); border-radius: var(--radius-sm);
+      font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: var(--transition);
+    }
+
+    .btn-approve:hover { background: var(--success); color: white; }
+
+    .btn-reject {
+      padding: 6px 14px; background: var(--error-bg); color: var(--error);
+      border: 1px solid rgba(220,38,38,0.2); border-radius: var(--radius-sm);
+      font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: var(--transition);
+    }
+
+    .btn-reject:hover { background: var(--error); color: white; }
+
+    .btn-view {
+      padding: 6px 10px; background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+      text-decoration: none; display: inline-flex; align-items: center;
+      transition: var(--transition);
+    }
+
+    .btn-view:hover { border-color: var(--blue); color: var(--blue); }
+
+    .empty-state {
+      padding: 60px 24px; text-align: center; color: var(--text-muted);
+    }
+
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+    .empty-desc { font-size: 13px; }
+
+    /* Alerts */
+    .admin-alert {
+      padding: 13px 16px; border-radius: var(--radius); margin-bottom: 20px;
+      display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 500;
+    }
+
+    .admin-alert-success { background: var(--success-bg); color: #065F46; border: 1px solid rgba(5,150,105,0.2); }
+    .admin-alert-error   { background: var(--error-bg);   color: #991B1B; border: 1px solid rgba(220,38,38,0.2); }
+
+    /* Avatar colours */
+    .av-blue   { background: #DBEAFE; color: #1D4ED8; }
+    .av-green  { background: #D1FAE5; color: #065F46; }
+    .av-purple { background: #EDE9FE; color: #6D28D9; }
+    .av-orange { background: #FEF3C7; color: #92400E; }
+  </style>
+</head>
+<body>
+
+<div class="admin-shell">
+
+  <!-- ── Sidebar ─────────────────────────────────────────── -->
+  <aside class="admin-sidebar">
+    <div class="sidebar-logo">
+      <div class="brand-logo-mark">Z</div>
+      <div>
+        <div class="brand-name">ZenithBank</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:0.5px;text-transform:uppercase">Admin Portal</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a th:href="@{/admin/customers}" class="nav-item active">
+        <span class="nav-icon">👥</span>
+        Pending Approvals
+        <span class="nav-badge" th:text="${customers?.size() ?: 0}">0</span>
+      </a>
+      <a href="#" class="nav-item">
+        <span class="nav-icon">📊</span>
+        All Customers
+      </a>
+      <a href="#" class="nav-item">
+        <span class="nav-icon">🔒</span>
+        Security Log
+      </a>
+      <a href="#" class="nav-item">
+        <span class="nav-icon">⚙</span>
+        Settings
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div style="font-weight:600;color:rgba(255,255,255,0.5);margin-bottom:2px" sec:authentication="name">Admin</div>
+      <a th:href="@{/logout}" style="color:rgba(255,255,255,0.3);font-size:11px;text-decoration:none">Sign out</a>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ──────────────────────────────────────── -->
+  <main class="admin-main">
+
+    <div class="admin-topbar">
+      <div>
+        <div class="page-title">Pending Approvals</div>
+        <div class="page-subtitle">Review and approve new customer registrations</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:12px;color:var(--text-muted)" id="lastUpdated"></div>
+        <button onclick="location.reload()" class="btn btn-outline" style="padding:8px 14px;font-size:12px;width:auto">
+          ↻ Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div th:if="${success}" class="admin-alert admin-alert-success">
+      <span>✓</span><span th:text="${success}"></span>
+    </div>
+    <div th:if="${error}" class="admin-alert admin-alert-error">
+      <span>⚠</span><span th:text="${error}"></span>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Awaiting Review</div>
+        <div class="stat-value blue" th:text="${customers?.size() ?: 0}">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Approved Today</div>
+        <div class="stat-value green">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rejected Today</div>
+        <div class="stat-value red">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg. Review Time</div>
+        <div class="stat-value gold">1.4d</div>
+      </div>
+    </div>
+
+    <!-- Table card -->
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Customers awaiting approval</div>
+        <div class="search-wrapper">
+          <input type="text" class="search-input" placeholder="Search by name or email…"
+                 oninput="filterTable(this.value)" />
+        </div>
+      </div>
+
+      <div th:if="${customers == null or customers.empty}" class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <div class="empty-title">All caught up</div>
+        <div class="empty-desc">No applications are waiting for review right now.</div>
+      </div>
+
+      <div th:unless="${customers == null or customers.empty}">
+        <table id="customersTable">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>ID Number</th>
+              <th>Applied</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="c, stat : ${customers}" class="customer-row">
+              <td>
+                <div class="customer-info">
+                  <div class="avatar"
+                       th:classappend="${stat.index % 4 == 0 ? 'av-blue' : stat.index % 4 == 1 ? 'av-green' : stat.index % 4 == 2 ? 'av-purple' : 'av-orange'}"
+                       th:text="${#strings.substring(c.firstName, 0, 1) + #strings.substring(c.lastName, 0, 1)}">SP</div>
+                  <div>
+                    <div class="customer-name" th:text="${c.fullName}">Sifiso Nkosi</div>
+                    <div class="customer-email" th:text="${c.email}">sifiso@example.com</div>
+                  </div>
+                </div>
+              </td>
+              <td th:text="${c.phoneNumber}">0821234567</td>
+              <td>
+                <span style="font-family:monospace;font-size:12px;background:var(--surface);padding:3px 8px;border-radius:4px"
+                      th:text="${#strings.substring(c.idNumber, 0, 6) + '*******'}">900101*****</span>
+              </td>
+              <td>
+                <span th:text="${#temporals.format(c.createdAt, 'dd MMM yyyy')}">01 Jan 2026</span>
+                <div style="font-size:11px;color:var(--text-muted)"
+                     th:text="${#temporals.format(c.createdAt, 'HH:mm')}">09:00</div>
+              </td>
+              <td>
+                <span class="status-badge badge-verified">OTP Verified</span>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <form th:action="@{/admin/customers/{id}/approve(id=${c.id})}" method="post" style="display:inline">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button type="submit" class="btn-approve" onclick="return confirm('Approve this customer?')">Approve</button>
+                  </form>
+                  <button class="btn-reject" onclick="showRejectModal([[${c.id}]])">Reject</button>
+                  <a th:href="@{/admin/customers/{id}(id=${c.id})}" class="btn-view">View →</a>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Reject modal -->
+<div id="rejectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:none;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:var(--radius-xl);padding:32px;max-width:440px;width:90%;box-shadow:var(--shadow-lg)">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Reject application</h3>
+    <p style="font-size:13.5px;color:var(--text-secondary);margin-bottom:20px">Provide a reason (optional). This will be included in the email sent to the applicant.</p>
+    <form id="rejectForm" method="post">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+      <textarea name="reason" placeholder="e.g. Could not verify ID document details…"
+                style="width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:'Inter',sans-serif;font-size:13.5px;resize:vertical;min-height:80px;outline:none;margin-bottom:16px;color:var(--text-primary)"></textarea>
+      <div style="display:flex;gap:10px">
+        <button type="button" onclick="closeModal()" class="btn btn-outline" style="width:auto;padding:11px 20px">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:1;background:var(--error);box-shadow:none">Reject application</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Last updated timestamp
+  document.getElementById('lastUpdated').textContent =
+    'Last updated: ' + new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+
+  // Table search filter
+  function filterTable(query) {
+    const q = query.toLowerCase();
+    document.querySelectorAll('.customer-row').forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(q) ? '' : 'none';
+    });
+  }
+
+  // Reject modal
+  function showRejectModal(customerId) {
+    const modal = document.getElementById('rejectModal');
+    document.getElementById('rejectForm').action = '/admin/customers/' + customerId + '/reject';
+    modal.style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+  }
+
+  document.getElementById('rejectModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+</script>
+</body>
+</html>

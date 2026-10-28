@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aurora-ai-service
+  namespace: zenithbank
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: aurora-ai-service}
+  template:
+    metadata:
+      labels: {app: aurora-ai-service}
+    spec:
+      containers:
+        - name: aurora-ai-service
+          image: ${REGISTRY}/zenithbank-aurora-ai-service:${TAG}
+          ports: [{containerPort: 8000}]
+          envFrom:
+            - configMapRef: {name: zenithbank-config}
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://$(DB_USER):$(DB_PASSWORD)@postgres:5432/zenithbank_banking"
+            - name: DB_USER
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: DB_USER}}
+            - name: DB_PASSWORD
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: DB_PASSWORD}}
+            - name: ANTHROPIC_API_KEY
+              valueFrom: {secretKeyRef: {name: zenithbank-secrets, key: ANTHROPIC_API_KEY}}
+          readinessProbe:
+            httpGet: {path: /api/aurora/health, port: 8000}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aurora-ai-service
+  namespace: zenithbank
+spec:
+  selector: {app: aurora-ai-service}
+  ports: [{port: 8000, targetPort: 8000}]

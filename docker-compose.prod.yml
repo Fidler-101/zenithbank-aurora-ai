@@ -1,0 +1,224 @@
+# ============================================================
+# PRODUCTION variant — pulls pre-built images from GHCR instead
+# of building from source on every deploy. This is what the CI/CD
+# pipeline's `docker compose pull && docker compose up -d` step
+# uses on the EC2 box.
+#
+# Requires GHCR_OWNER and TAG in the .env on the server, e.g.:
+#   GHCR_OWNER=your-github-username
+#   TAG=latest
+# ============================================================
+# ============================================================
+# ZenithBank & AuroraAI — full local stack
+#
+# Layout this expects (copy each Dockerfile.<service> from
+# dockerfiles/ into that service's own folder as `Dockerfile`
+# first — see ../README.md):
+#
+#   ./eureka-server/Dockerfile
+#   ./api-gateway/Dockerfile
+#   ./customer-service/Dockerfile
+#   ./banking-service/Dockerfile
+#   ./payment-service/Dockerfile
+#   ./transaction-status-service/Dockerfile
+#   ./aurora-ai-service/Dockerfile          (already exists)
+#   ./zb-microfrontends/                    (the frontend apps)
+#   ./keys/private_key.pem, public_key.pem  (see README — generate, don't commit)
+#
+# Run:  docker compose --env-file .env up -d --build
+# ============================================================
+
+services:
+
+  # ---------------- infrastructure ----------------
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-zenithbank_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
+    ports:
+      - "5432:5432"   # remove this in production — internal-only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-zenithbank_user}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [zenithnet]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-}"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [zenithnet]
+
+  # ---------------- platform ----------------
+
+  eureka-server:
+    image: ghcr.io/${GHCR_OWNER}/zenithbank-eureka-server:${TAG:-latest}
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks: [zenithnet]
+
+  api-gateway:
+    image: ghcr.io/${GHCR_OWNER}/zenithbank-api-gateway:${TAG:-latest}
+    depends_on:
+      eureka-server: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - ./keys/public_key.pem:/app/keys/public_key.pem:ro
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks: [zenithnet]
+
+  # ---------------- domain services ----------------
+
+  customer-service:
+    image: ghcr.io/${GHCR_OWNER}/zenithbank-customer-service:${TAG:-latest}
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      eureka-server: {condition: service_healthy}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/zenithbank_customer
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-zenithbank_user}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      APP_SECURITY_ENABLED: "true"   # never let this be false outside local testing
+      SPRING_MAIL_USERNAME: ${SMTP_EMAIL:-}
+      SPRING_MAIL_PASSWORD: ${SMTP_APP_PASSWORD:-}
+    volumes:
+      - ./keys:/app/keys:ro
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks: [zenithnet]
+
+  banking-service:
+    image: ghcr.io/${GHCR_OWNER}/zenithbank-banking-service:${TAG:-latest}
+    depends_on:
+      postgres: {condition: service_healthy}
+      eureka-server: {condition: service_healthy}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/zenithbank_banking
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-zenithbank_user}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    ports:
+      - "7777:7777"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7777/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks: [zenithnet]
+
+  payment-service:
+    image: ghcr.io/${GHCR_OWNER}/zenithbank-payment-service:${TAG:-latest}
+    depends_on:
+      postgres: {condition: service_healthy}
+      eureka-server: {condition: service_healthy}
+      banking-service: {condition: service_healthy}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/zenithbank_payment
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-zenithbank_user}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks: [zenithnet]
+
+  transaction-status-service:
+    image: ghcr.io/${GHCR_OWNER}/zenithbank-transaction-status-service:${TAG:-latest}
+    depends_on:
+      eureka-server: {condition: service_healthy}
+      banking-service: {condition: service_healthy}
+      payment-service: {condition: service_healthy}
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    ports:
+      - "8087:8087"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8087/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks: [zenithnet]
+
+  aurora-ai-service:
+    image: ghcr.io/${GHCR_OWNER}/zenithbank-aurora-ai-service:${TAG:-latest}
+    depends_on:
+      postgres: {condition: service_healthy}
+      banking-service: {condition: service_healthy}
+      payment-service: {condition: service_healthy}
+      customer-service: {condition: service_healthy}
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-zenithbank_user}:${DB_PASSWORD}@postgres:5432/zenithbank_banking
+      BANKING_SERVICE_URL: http://banking-service:7777
+      PAYMENT_SERVICE_URL: http://payment-service:8085
+      CUSTOMER_SERVICE_URL: http://customer-service:8081
+      TRANSACTION_STATUS_URL: http://transaction-status-service:8087
+      LLM_BACKEND: ${LLM_BACKEND:-ollama}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "8000:8000"
+    networks: [zenithnet]
+
+  # ---------------- frontend ----------------
+
+  frontend:
+    image: ghcr.io/${GHCR_OWNER}/zenithbank-zb-microfrontends:${TAG:-latest}
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks: [zenithnet]
+
+networks:
+  zenithnet:
+    driver: bridge
+
+volumes:
+  pgdata:

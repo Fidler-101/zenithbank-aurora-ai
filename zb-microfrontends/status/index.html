@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' http://localhost:8080; object-src 'none'; base-uri 'none'">
+<title>ZenithBank — Transaction status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="../shared/tokens.css">
+<script src="../shared/zb-common.js"></script>
+</head>
+<body>
+<div class="shell">
+  <div id="sidebar-mount"></div>
+  <div class="main">
+    <div class="topbar">
+      <div><h2>Transaction status</h2><div class="sub">transaction-status-service · aggregates across payment-service and banking-service</div></div>
+    </div>
+    <div class="content">
+      <div class="card view" style="max-width:520px;">
+        <h3>Track a payment</h3>
+        <div class="card-sub">Paste a payment ID to check its current state.</div>
+        <form id="status-form">
+          <div class="field"><label>Payment ID</label><input name="id" required placeholder="e.g. 8b1c2e40-..."></div>
+          <button class="btn btn-primary btn-block" type="submit"><span class="btn-label">Check status</span></button>
+        </form>
+        <div id="status-result" style="margin-top:18px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="./app.js"></script>
+</body>
+</html>

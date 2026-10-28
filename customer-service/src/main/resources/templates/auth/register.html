@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account — ZenithBank</title>
+  <link rel="stylesheet" th:href="@{/css/zenith.css}">
+</head>
+<body>
+
+<div class="auth-layout">
+
+  <!-- ── Brand Panel ── -->
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <div class="brand-logo-mark">Z</div>
+      <div>
+        <div class="brand-name">ZenithBank</div>
+        <div class="brand-tagline">Secure Digital Banking</div>
+      </div>
+    </div>
+
+    <div class="brand-content">
+      <h1 class="brand-headline">
+        Open your account<br><span>in minutes.</span>
+      </h1>
+      <p class="brand-subtext">
+        No paperwork. No branch visits. Just a few details and you're in.
+      </p>
+
+      <div class="brand-card-preview" aria-hidden="true" style="margin-top:32px">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:32px;height:32px;background:rgba(37,99,235,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">✓</div>
+            <div>
+              <div style="font-size:13px;color:white;font-weight:600">Personal details</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4)">Name, ID, date of birth</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:32px;height:32px;background:rgba(37,99,235,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">✓</div>
+            <div>
+              <div style="font-size:13px;color:white;font-weight:600">Verify your email</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4)">6-digit code, takes 30 seconds</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:32px;height:32px;background:rgba(212,168,67,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:var(--gold)">⏱</div>
+            <div>
+              <div style="font-size:13px;color:white;font-weight:600">Admin review</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4)">Usually within 1–2 business days</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="brand-footer">
+      <div class="brand-security-badges">
+        <div class="brand-badge">🔒 256-bit SSL</div>
+        <div class="brand-badge">✓ POPIA Compliant</div>
+        <div class="brand-badge">✓ FSCA Regulated</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Form Panel ── -->
+  <div class="form-panel">
+    <div class="form-panel-inner">
+
+      <!-- Progress steps -->
+      <div class="progress-steps" style="margin-bottom:32px">
+        <div class="step active" id="step1-indicator">
+          <div class="step-dot">1</div>
+          <div class="step-label">Details</div>
+        </div>
+        <div class="step-connector" id="conn1"></div>
+        <div class="step pending" id="step2-indicator">
+          <div class="step-dot">2</div>
+          <div class="step-label">Security</div>
+        </div>
+        <div class="step-connector" id="conn2"></div>
+        <div class="step pending" id="step3-indicator">
+          <div class="step-dot">3</div>
+          <div class="step-label">Address</div>
+        </div>
+      </div>
+
+      <!-- Step titles -->
+      <div id="step-title-area">
+        <h1 class="form-title" id="stepTitle">Your details</h1>
+        <p class="form-subtitle" id="stepSubtitle">Tell us about yourself. Everything is encrypted and protected.</p>
+      </div>
+
+      <!-- Alerts -->
+      <div th:if="${error}" class="alert alert-error">
+        <span class="alert-icon">⚠</span>
+        <span th:text="${error}"></span>
+      </div>
+
+      <form th:action="@{/register}" th:object="${registrationRequest}" method="post" id="registerForm">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+        <!-- ── STEP 1: Personal Details ── -->
+        <div id="step1">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="firstName">First name</label>
+              <input type="text" id="firstName" th:field="*{firstName}"
+                     class="form-input" th:classappend="${#fields.hasErrors('firstName')} ? 'error'"
+                     placeholder="Sifiso" autocomplete="given-name" />
+              <div class="field-error" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="lastName">Last name</label>
+              <input type="text" id="lastName" th:field="*{lastName}"
+                     class="form-input" th:classappend="${#fields.hasErrors('lastName')} ? 'error'"
+                     placeholder="Nkosi" autocomplete="family-name" />
+              <div class="field-error" th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}"></div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="idNumber">SA ID number</label>
+              <input type="text" id="idNumber" th:field="*{idNumber}"
+                     class="form-input" th:classappend="${#fields.hasErrors('idNumber')} ? 'error'"
+                     placeholder="9001015009087" maxlength="13" inputmode="numeric" />
+              <div class="field-error" th:if="${#fields.hasErrors('idNumber')}" th:errors="*{idNumber}"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="dateOfBirth">Date of birth</label>
+              <input type="date" id="dateOfBirth" th:field="*{dateOfBirth}"
+                     class="form-input" th:classappend="${#fields.hasErrors('dateOfBirth')} ? 'error'" />
+              <div class="field-error" th:if="${#fields.hasErrors('dateOfBirth')}" th:errors="*{dateOfBirth}"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">Email address</label>
+            <div class="input-wrapper">
+              <input type="email" id="email" th:field="*{email}"
+                     class="form-input has-icon" th:classappend="${#fields.hasErrors('email')} ? 'error'"
+                     placeholder="you@example.com" autocomplete="email" />
+              <span class="input-icon">✉</span>
+            </div>
+            <div class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="phoneNumber">Phone number</label>
+            <div class="input-wrapper">
+              <input type="tel" id="phoneNumber" th:field="*{phoneNumber}"
+                     class="form-input has-icon" th:classappend="${#fields.hasErrors('phoneNumber')} ? 'error'"
+                     placeholder="0821234567" autocomplete="tel" />
+              <span class="input-icon">📱</span>
+            </div>
+            <div class="field-error" th:if="${#fields.hasErrors('phoneNumber')}" th:errors="*{phoneNumber}"></div>
+            <div class="field-hint">South African number (e.g. 082 123 4567)</div>
+          </div>
+
+          <button type="button" class="btn btn-primary" onclick="goToStep(2)">
+            Continue <span style="margin-left:4px">→</span>
+          </button>
+        </div>
+
+        <!-- ── STEP 2: Security ── -->
+        <div id="step2" style="display:none">
+          <div class="form-group">
+            <label class="form-label" for="password">Create a password</label>
+            <div class="input-wrapper">
+              <input type="password" id="password" th:field="*{password}"
+                     class="form-input has-icon" th:classappend="${#fields.hasErrors('password')} ? 'error'"
+                     placeholder="Minimum 8 characters" autocomplete="new-password"
+                     oninput="updateStrength(this.value)" />
+              <span class="input-icon">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePassword('password', this)">
+                <span class="eye-icon">👁</span>
+              </button>
+            </div>
+            <div class="password-strength">
+              <div class="strength-bars">
+                <div class="strength-bar" id="bar1"></div>
+                <div class="strength-bar" id="bar2"></div>
+                <div class="strength-bar" id="bar3"></div>
+                <div class="strength-bar" id="bar4"></div>
+              </div>
+              <div class="strength-label" id="strengthLabel">Enter a password</div>
+            </div>
+            <div class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="confirmPassword">Confirm password</label>
+            <div class="input-wrapper">
+              <input type="password" id="confirmPassword" th:field="*{confirmPassword}"
+                     class="form-input has-icon" th:classappend="${#fields.hasErrors('confirmPassword')} ? 'error'"
+                     placeholder="Repeat your password" autocomplete="new-password" />
+              <span class="input-icon">🔒</span>
+              <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword', this)">
+                <span class="eye-icon">👁</span>
+              </button>
+            </div>
+            <div class="field-error" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></div>
+          </div>
+
+          <div class="alert alert-info" style="margin-bottom:20px">
+            <span class="alert-icon">ℹ</span>
+            <span>Use at least 8 characters with uppercase, lowercase, a number, and a special character.</span>
+          </div>
+
+          <div class="checkbox-group" style="margin-bottom:20px">
+            <input type="checkbox" id="terms" required>
+            <label class="checkbox-label" for="terms">
+              I agree to ZenithBank's <a href="#">Terms of Service</a> and
+              <a href="#">Privacy Policy</a> in accordance with POPIA.
+            </label>
+          </div>
+
+          <div style="display:flex;gap:10px">
+            <button type="button" class="btn btn-outline" onclick="goToStep(1)" style="width:auto;padding:12px 20px">
+              ← Back
+            </button>
+            <button type="button" class="btn btn-primary" onclick="goToStep(3)" style="flex:1">
+              Continue →
+            </button>
+          </div>
+        </div>
+
+        <!-- ── STEP 3: Address ── -->
+        <div id="step3" style="display:none">
+          <div class="form-group">
+            <label class="form-label" for="addressLine1">Street address</label>
+            <input type="text" id="addressLine1" th:field="*{addressLine1}"
+                   class="form-input" th:classappend="${#fields.hasErrors('addressLine1')} ? 'error'"
+                   placeholder="123 Main Street" autocomplete="address-line1" />
+            <div class="field-error" th:if="${#fields.hasErrors('addressLine1')}" th:errors="*{addressLine1}"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="addressLine2">
+              Unit / Suite <span class="optional">(optional)</span>
+            </label>
+            <input type="text" id="addressLine2" th:field="*{addressLine2}"
+                   class="form-input" placeholder="Apartment, suite, etc."
+                   autocomplete="address-line2" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="city">City</label>
+              <input type="text" id="city" th:field="*{city}"
+                     class="form-input" th:classappend="${#fields.hasErrors('city')} ? 'error'"
+                     placeholder="Pretoria" autocomplete="address-level2" />
+              <div class="field-error" th:if="${#fields.hasErrors('city')}" th:errors="*{city}"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="postalCode">Postal code</label>
+              <input type="text" id="postalCode" th:field="*{postalCode}"
+                     class="form-input" th:classappend="${#fields.hasErrors('postalCode')} ? 'error'"
+                     placeholder="0001" maxlength="4" inputmode="numeric" autocomplete="postal-code" />
+              <div class="field-error" th:if="${#fields.hasErrors('postalCode')}" th:errors="*{postalCode}"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="province">Province</label>
+            <select id="province" th:field="*{province}"
+                    class="form-select" th:classappend="${#fields.hasErrors('province')} ? 'error'">
+              <option value="">Select your province</option>
+              <option th:each="prov : ${provinces}" th:value="${prov}" th:text="${prov}"></option>
+            </select>
+            <div class="field-error" th:if="${#fields.hasErrors('province')}" th:errors="*{province}"></div>
+          </div>
+
+          <div style="display:flex;gap:10px">
+            <button type="button" class="btn btn-outline" onclick="goToStep(2)" style="width:auto;padding:12px 20px">
+              ← Back
+            </button>
+            <button type="submit" class="btn btn-primary" id="submitBtn" style="flex:1">
+              <span class="btn-spinner"></span>
+              <span class="btn-text">Create account →</span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+
+      <div class="form-footer">
+        Already have an account?
+        <a th:href="@{/login}">Sign in</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentStep = 1;
+
+  // If there are server-side errors, show the right step
+  const hasErrors = document.querySelectorAll('.field-error').length > 0;
+  if (hasErrors) {
+    // Default to step 1 if errors exist after submit
+    showStep(1);
+  }
+
+  function goToStep(step) {
+    if (step > currentStep && !validateStep(currentStep)) return;
+    showStep(step);
+  }
+
+  function showStep(step) {
+    [1, 2, 3].forEach(n => {
+      document.getElementById('step' + n).style.display = n === step ? 'block' : 'none';
+      const indicator = document.getElementById('step' + n + '-indicator');
+      indicator.className = 'step ' + (n < step ? 'done' : n === step ? 'active' : 'pending');
+      indicator.querySelector('.step-dot').textContent = n < step ? '✓' : n;
+    });
+
+    [1, 2].forEach(n => {
+      const conn = document.getElementById('conn' + n);
+      conn.className = 'step-connector' + (n < step ? ' done' : '');
+    });
+
+    const titles = {
+      1: ['Your details', 'Tell us about yourself. Everything is encrypted and protected.'],
+      2: ['Secure your account', 'Choose a strong password to protect your account.'],
+      3: ['Your address', 'Required for KYC compliance. Used only for verification.']
+    };
+    document.getElementById('stepTitle').textContent   = titles[step][0];
+    document.getElementById('stepSubtitle').textContent = titles[step][1];
+    currentStep = step;
+  }
+
+  function validateStep(step) {
+    const fields = {
+      1: ['firstName', 'lastName', 'idNumber', 'dateOfBirth', 'email', 'phoneNumber'],
+      2: ['password', 'confirmPassword'],
+      3: ['addressLine1', 'city', 'postalCode', 'province']
+    };
+
+    let valid = true;
+    fields[step].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.value.trim()) {
+        el.classList.add('error');
+        valid = false;
+      } else if (el) {
+        el.classList.remove('error');
+      }
+    });
+
+    if (step === 2) {
+      const pw  = document.getElementById('password').value;
+      const cpw = document.getElementById('confirmPassword').value;
+      const terms = document.getElementById('terms');
+      if (pw !== cpw) {
+        document.getElementById('confirmPassword').classList.add('error');
+        valid = false;
+      }
+      if (!terms.checked) { valid = false; terms.focus(); }
+    }
+
+    return valid;
+  }
+
+  function togglePassword(id, btn) {
+    const input = document.getElementById(id);
+    input.type = input.type === 'text' ? 'password' : 'text';
+    btn.querySelector('.eye-icon').textContent = input.type === 'password' ? '👁' : '🙈';
+  }
+
+  function updateStrength(pw) {
+    let score = 0;
+    if (pw.length >= 8)  score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    const colors = ['', 'weak', 'weak', 'fair', 'strong'];
+    const labels = ['Enter a password', 'Too weak', 'Weak', 'Fair', 'Strong'];
+    const labelColors = ['', '#DC2626', '#DC2626', '#D97706', '#059669'];
+
+    for (let i = 1; i <= 4; i++) {
+      const bar = document.getElementById('bar' + i);
+      bar.className = 'strength-bar' + (i <= score ? ' ' + colors[score] : '');
+    }
+    const label = document.getElementById('strengthLabel');
+    label.textContent = labels[pw.length ? score : 0];
+    label.style.color = labelColors[pw.length ? score : 0];
+  }
+
+  document.getElementById('registerForm').addEventListener('submit', () => {
+    const btn = document.getElementById('submitBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+  });
+</script>
+</body>
+</html>
